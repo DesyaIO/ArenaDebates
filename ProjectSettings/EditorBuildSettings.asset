@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1045 &1
+EditorBuildSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/DialogScene.unity
+    guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/LoginScene.unity
+    guid: a41e67315fb303b4f9b39ed67e1a6aab
+  - enabled: 1
+    path: Assets/Scenes/GoalSetupScene.unity
+    guid: 150f6035605f835478600c22bf825037
+  - enabled: 1
+    path: Assets/Scenes/LearningScene.unity
+    guid: 757a3575b85618a4bae34a812e846b75
+  - enabled: 1
+    path: Assets/Scenes/ListeningScene.unity
+    guid: d57d6596fbaf28d4c8904482625982fc
+  - enabled: 1
+    path: Assets/Scenes/MenuScene.unity
+    guid: 416d1f33994be5748b99e5f84e23dbf7
+  - enabled: 1
+    path: Assets/Scenes/LearningDialog.unity
+    guid: fd41afd25f6099948a353223124d6aa3
+  m_configObjects: {}
