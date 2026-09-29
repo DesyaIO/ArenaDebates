@@ -47,7 +47,7 @@ public sealed class LegacyArrowPrefix : MonoBehaviour
         if (label == null) label = GetComponent<TMP_Text>();
         if (label == null || arrow == null) return;
         // Also handles captions replaced at runtime (for example prologue pages).
-        if (label.text.Contains("→")) label.text = label.text.Replace("→", "").Trim();
+        if (label.text.Contains("→")) label.text = label.text.Replace("", "").Trim();
         arrow.color = label.color;
         arrow.fontSize = Mathf.Max(1, Mathf.RoundToInt(label.fontSize));
         arrow.rectTransform.sizeDelta = new Vector2(label.fontSize * 1.2f, label.fontSize * 1.8f);

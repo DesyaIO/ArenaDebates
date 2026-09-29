@@ -26,9 +26,10 @@ public static class VisibleScrollbar
 
     public static void Ensure(ScrollRect scroll)
     {
-        if (scroll == null || !scroll.vertical || scroll.content == null) return;
+        if (scroll == null || !scroll.enabled || !scroll.vertical || scroll.content == null) return;
         if (scroll.verticalScrollbar != null)
         {
+            MakeSlim(scroll.verticalScrollbar);
             scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
             return;
         }
@@ -64,5 +65,30 @@ public static class VisibleScrollbar
         bar.targetGraphic = handleImage;
         scroll.verticalScrollbar = bar;
         scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+        MakeSlim(bar);
+    }
+
+    private static void MakeSlim(Scrollbar bar)
+    {
+        var rect = (RectTransform)bar.transform;
+        var canvas = bar.GetComponentInParent<Canvas>();
+        // Keep the same thickness even inside enlarged prototype panels.
+        float scale = canvas != null
+            ? canvas.rootCanvas.transform.InverseTransformVector(rect.TransformVector(Vector3.right)).magnitude
+            : 1f;
+        rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 9f / Mathf.Max(.01f, scale));
+
+        // Unity's default scrollbar has horizontal padding wider than a slim track.
+        var slidingArea = bar.handleRect != null ? bar.handleRect.parent as RectTransform : null;
+        if (slidingArea != null && slidingArea != rect)
+        {
+            slidingArea.offsetMin = new Vector2(0f, slidingArea.offsetMin.y);
+            slidingArea.offsetMax = new Vector2(0f, slidingArea.offsetMax.y);
+        }
+        if (bar.handleRect != null)
+        {
+            bar.handleRect.offsetMin = new Vector2(0f, bar.handleRect.offsetMin.y);
+            bar.handleRect.offsetMax = new Vector2(0f, bar.handleRect.offsetMax.y);
+        }
     }
 }

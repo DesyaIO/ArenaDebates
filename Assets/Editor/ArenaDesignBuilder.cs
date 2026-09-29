@@ -420,7 +420,7 @@ public static class ArenaDesignBuilder
         c.ResultText=Text(c.ResultPanel.transform,"ResultTitle","Результат",24,133,330,130,28);
         Glass(c.ResultPanel.transform,"Feedback",24,282,330,247);var es=Scroll(c.ResultPanel.transform,"Explanation",42,300,294,208);
         c.ExplanationText=Text(es.content,"ExplanationText","Разбор ответа",0,0,294,180,14,Sub);FlexibleText(c.ExplanationText);
-        c.NextButton=Button(c.ResultPanel.transform,"Next","Следующий перехват  →",24,584);
+        c.NextButton=Button(c.ResultPanel.transform,"Next","Следующий перехват",24,584);
         c.RetryButton=Button(c.ResultPanel.transform,"Retry","Попробовать ещё раз",24,584);
         c.MenuButton=Button(c.ResultPanel.transform,"Menu","Вернуться на карту",24,653,330,52,false);
         c.QuestionPanel.SetActive(false);c.AnswerPanel.SetActive(false);c.ResultPanel.SetActive(false);Save("ListeningScene");

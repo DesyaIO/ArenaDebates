@@ -586,8 +586,8 @@ public class ListeningController : MonoBehaviour
         if (ResultText != null)
         {
             ResultText.text = correct
-                ? $"✅ Верно! {_currentTask.CorrectMethodology}"
-                : $"❌ Неверно. Правильный ответ: {_currentTask.CorrectMethodology}";
+                ? $"Верно! {_currentTask.CorrectMethodology}"
+                : $"Неверно. Правильный ответ: {_currentTask.CorrectMethodology}";
         }
 
         if (ExplanationText != null) ExplanationText.text = _currentTask.CorrectExplanation;

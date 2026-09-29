@@ -18,6 +18,9 @@ public class LearningDialogController : MonoBehaviour
     private LearningContentSO _lesson;
     private string _method, _pendingTranscript, _submittedTranscript;
     private string _speechError;
+    private bool _requestInFlight;
+    private float _requestDeadline;
+    private const float RequestTimeoutSeconds = 125f;
     private bool _ready, _initializing, _busy, _recording, _awaitingTranscript, _retry, _finished, _needsClarification;
     private int _generation, _turns, _successes;
     private float _remaining, _recognitionDeadline;
@@ -98,6 +101,12 @@ public class LearningDialogController : MonoBehaviour
 
     void Update()
     {
+        if (_requestInFlight && Time.realtimeSinceStartup >= _requestDeadline)
+        {
+            ++_generation;
+            if (_request != null) Coach.Client.StopCoroutine(_request);
+            Fail("Превышено время ожидания ответа тренера. Проверьте соединение и повторите запрос.");
+        }
         if (_recording)
         {
             _remaining -= Time.unscaledDeltaTime;
@@ -146,7 +155,8 @@ public class LearningDialogController : MonoBehaviour
 
     void Retry()
     {
-        if (!_busy && !_recording && _retry && !string.IsNullOrWhiteSpace(_submittedTranscript))
+        // The opening request has no player transcript, but must be retryable too.
+        if (!_busy && !_recording && _retry && _session != null && !_finished)
             Send(_submittedTranscript);
     }
 
@@ -171,7 +181,7 @@ public class LearningDialogController : MonoBehaviour
 
     void ContinueAfterFeedback()
     {
-        if (_busy || _finished) return;
+        if (_busy || _retry || _finished) return;
         if (_needsClarification)
         {
             _needsClarification = false;
@@ -190,15 +200,18 @@ public class LearningDialogController : MonoBehaviour
 
     void Send(string transcript = null)
     {
+        if (_busy || _requestInFlight || _session == null || _finished) return;
         _busy = true;
         _retry = false;
+        _requestInFlight = true;
+        _requestDeadline = Time.realtimeSinceStartup + RequestTimeoutSeconds;
         int generation = ++_generation;
         bool opening = _session.Entries.Count == 0;
         string submittedText = transcript ?? _pendingTranscript ?? "";
         if (!opening) View.SetStep(_turns + 1, PracticeTurns, "ВАШ ОТВЕТ / РАЗБОР");
         Progress(opening ? "Готовим подсказку" : "Разбираем ответ и готовим следующий ход");
         Refresh();
-        _request = Coach.Client.SendRequest(Coach.BuildPrompt(_method, _lesson, _session, submittedText),
+        var request = Coach.Client.SendRequest(Coach.BuildPrompt(_method, _lesson, _session, submittedText),
             text =>
             {
                 if (this == null || !isActiveAndEnabled || generation != _generation) return;
@@ -255,14 +268,23 @@ public class LearningDialogController : MonoBehaviour
                 if (this == null || !isActiveAndEnabled || generation != _generation) return;
                 ++_generation;
                 Fail(error);
-            });
+            }, logErrorsAsWarnings: true);
+        // Validation can fail synchronously, before SendRequest returns its handle.
+        if (_requestInFlight && generation == _generation) _request = request;
     }
 
     void Fail(string error)
     {
         _retry = true;
-        Debug.LogError("LearningDialog: " + error);
-        EndBusy("Не удалось получить разбор. Нажмите «Повторить запрос» или начните новую тренировку.");
+        Debug.LogWarning("LearningDialog: " + error);
+        bool opening = _session != null && _session.Entries.Count == 0;
+        if (View.FeedbackText != null)
+            View.FeedbackText.text = opening
+                ? "Не удалось получить первую реплику тренера. Проверьте соединение и повторите запрос."
+                : "Не удалось получить полный разбор. Ваша реплика сохранена, ход не засчитан. Проверьте соединение и повторите запрос.";
+        if (View.TranscriptText != null)
+            View.TranscriptText.text = opening ? "" : "«" + _submittedTranscript + "»";
+        EndBusy("Ответ тренера не получен. Нажмите «Повторить разбор» после восстановления соединения.");
         View.ShowFeedback(false);
     }
 
@@ -287,6 +309,7 @@ public class LearningDialogController : MonoBehaviour
     {
         if (_progress != null) StopCoroutine(_progress);
         _progress = _request = null;
+        _requestInFlight = false;
         _busy = false;
         View.SetStatus(status);
         Refresh();
@@ -300,6 +323,7 @@ public class LearningDialogController : MonoBehaviour
         if (_request != null) Coach.Client.StopCoroutine(_request);
         if (_progress != null) StopCoroutine(_progress);
         _request = _progress = null;
+        _requestInFlight = false;
         _busy = _retry = false;
     }
 

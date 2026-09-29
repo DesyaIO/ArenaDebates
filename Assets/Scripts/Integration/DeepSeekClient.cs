@@ -92,14 +92,16 @@ public class DeepSeekClient : MonoBehaviour
 
     // ---------- Публичный API ----------
 
-    public Coroutine SendRequest(string prompt, Action<string> onComplete, Action<string> onError)
+    public Coroutine SendRequest(string prompt, Action<string> onComplete, Action<string> onError,
+        bool logErrorsAsWarnings = false)
     {
-        return StartCoroutine(SendRequestCoroutine(prompt, onComplete, onError));
+        return StartCoroutine(SendRequestCoroutine(prompt, onComplete, onError, logErrorsAsWarnings));
     }
 
     // ---------- Основной запрос ----------
 
-    private IEnumerator SendRequestCoroutine(string prompt, Action<string> onComplete, Action<string> onError)
+    private IEnumerator SendRequestCoroutine(string prompt, Action<string> onComplete, Action<string> onError,
+        bool logErrorsAsWarnings)
     {
         if (string.IsNullOrWhiteSpace(ApiKey) || ApiKey.StartsWith("ВАШ_КЛЮЧ"))
         {
@@ -172,7 +174,8 @@ public class DeepSeekClient : MonoBehaviour
             if (request.result != UnityWebRequest.Result.Success)
             {
                 string error = $"Ошибка KodikRouter (HTTP {request.responseCode}): {request.error}";
-                Debug.LogError(error);
+                if (logErrorsAsWarnings) Debug.LogWarning(error);
+                else Debug.LogError(error);
                 onError?.Invoke(error);
                 yield break;
             }
@@ -184,7 +187,8 @@ public class DeepSeekClient : MonoBehaviour
             }
             catch (Exception e)
             {
-                Debug.LogError($"Ошибка парсинга ответа KodikRouter: {e.Message}");
+                if (logErrorsAsWarnings) Debug.LogWarning($"Ошибка парсинга ответа KodikRouter: {e.Message}");
+                else Debug.LogError($"Ошибка парсинга ответа KodikRouter: {e.Message}");
                 onError?.Invoke("Ошибка парсинга ответа KodikRouter.");
                 yield break;
             }

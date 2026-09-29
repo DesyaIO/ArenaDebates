@@ -411,7 +411,7 @@ public class LearningDialogView : MonoBehaviour
         }
         if (SubmitButton != null) SubmitButton.interactable = !busy && !_busy;
         if (RetakeButton != null) RetakeButton.interactable = !busy && !_busy;
-        if (ContinueButton != null) ContinueButton.interactable = !_busy;
+        if (ContinueButton != null) ContinueButton.interactable = !busy && !canRetry && !_busy;
     }
 
     public void ShowReply(LearningDialogCoach.Reply reply, bool opening)

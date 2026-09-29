@@ -20,7 +20,6 @@ public class VoskSpeechController : MonoBehaviour
     public Button microphoneButton;
     public TMP_Text statusText;
     public TMP_Text resultText;
-    public TMP_Text timerText;
 
     [Header("Сложность оппонента")]
     [Tooltip("Лёгкий / Средний / Сложный")]
@@ -115,7 +114,6 @@ public string OpponentPromptTemplate = @"
         if (seconds != _lastShownSecond)
         {
             _lastShownSecond = seconds;
-            if (timerText != null) timerText.text = seconds.ToString();
             statusText.text = $"Запись... ({seconds} сек)";
         }
         if (_recordTimeLeft <= 0f) StopRecording();
@@ -153,7 +151,6 @@ public string OpponentPromptTemplate = @"
         _isProcessing = true;
         BeginProgress("Распознавание речи");
         vosk.StopRecognition();
-        if (timerText != null) timerText.text = "";
         RefreshRecordButton();
     }
 
@@ -326,7 +323,6 @@ public string OpponentPromptTemplate = @"
         if (_request != null && deepSeekClient != null) deepSeekClient.StopCoroutine(_request);
         _request = null;
         StopProgress();
-        if (timerText != null) timerText.text = "";
         RefreshRecordButton();
     }
 
