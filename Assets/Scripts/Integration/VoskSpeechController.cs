@@ -17,6 +17,7 @@ public class VoskSpeechController : MonoBehaviour
 
     [Header("UI")]
     public Button recordButton;
+    public Button microphoneButton;
     public TMP_Text statusText;
     public TMP_Text resultText;
     public TMP_Text timerText;
@@ -74,7 +75,8 @@ public string OpponentPromptTemplate = @"
 ";
 //ВАЖНО: Будь честным при классификации. Если твой ответ слабый — так и напиши «Слабый/Неубедительный ответ». Не выбирай «хорошие» категории из вежливости.
     private bool _isInitialized, _isInitializing, _isRecording, _isProcessing;
-    private bool _awaitingTranscript;
+    private string _speechError;
+    private bool _awaitingTranscript, _awaitingAnalysisContinue;
     private int _generation;
     private Coroutine _progressAnimation, _request;
     private float _recordTimeLeft;
@@ -89,6 +91,7 @@ public string OpponentPromptTemplate = @"
             vosk.OnTranscriptionResult += OnTranscriptionResult;
         }
         if (recordButton != null) recordButton.onClick.AddListener(OnButtonClicked);
+        if (microphoneButton != null) microphoneButton.onClick.AddListener(OnButtonClicked);
     }
 
     public void InitializeVosk()
@@ -96,7 +99,7 @@ public string OpponentPromptTemplate = @"
         if (_isInitialized || _isInitializing) return;
         if (vosk == null || voiceProcessor == null)
         {
-            statusText.text = "Не назначены Vosk/VoiceProcessor";
+            if (statusText != null) statusText.text = "Не назначены Vosk/VoiceProcessor";
             return;
         }
         _isInitializing = true;
@@ -120,18 +123,24 @@ public string OpponentPromptTemplate = @"
 
     void OnButtonClicked()
     {
-        if (_isProcessing || _isInitializing || Session == null || Session.IsGameOver) return;
+        if (_isProcessing || _isInitializing || Session == null || Session.IsGameOver || (uiController != null && uiController.IsPresentingStart)) return;
+        if (_awaitingAnalysisContinue)
+        {
+            _awaitingAnalysisContinue = false;
+            if (!Session.IsPlayerTurn) { RefreshRecordButton(); StartOpponentTurn(); return; }
+            RefreshRecordButton();
+        }
         if (!Session.IsPlayerTurn) { StartOpponentTurn(); return; }
         if (!_isInitialized) { InitializeVosk(); return; }
         if (_isRecording) { StopRecording(); return; }
         _isRecording = true;
         _recordTimeLeft = vosk.MaxRecordLength;
         _lastShownSecond = -1;
-        resultText.text = "";
+        _speechError = null;
         if (!vosk.StartRecognition())
         {
             _isRecording = false;
-            statusText.text = "Распознавание ещё завершается. Повторите запись чуть позже.";
+            if (statusText != null) statusText.text = _speechError ?? "Распознавание ещё завершается. Повторите запись чуть позже.";
         }
         RefreshRecordButton();
     }
@@ -150,6 +159,15 @@ public string OpponentPromptTemplate = @"
 
     void OnStatusUpdated(string status)
     {
+        if (status.StartsWith("Error:"))
+        {
+            _speechError = status.Substring("Error:".Length).Trim();
+            if (_isInitializing) _isInitialized = false;
+            _isInitializing = false;
+            if (statusText != null) statusText.text = _speechError;
+            RefreshRecordButton();
+            return;
+        }
         if (status.Contains("Initialized"))
         {
             _isInitialized = true;
@@ -175,8 +193,19 @@ public string OpponentPromptTemplate = @"
             FinishProcessing("Речь не распознана. Повторите запись.");
             return;
         }
+        if (!session.AnalyzeResponses)
+        {
+            gameManager.ApplyPlayerAnswer(text, "Разбор отключён", "");
+            if (session.IsGameOver) FinishProcessing("Диалог завершён");
+            else
+            {
+                FinishProcessing("Ход оппонента");
+                StartOpponentTurn();
+            }
+            return;
+        }
         if (deepSeekClient == null) { FinishProcessing("Не назначен DeepSeekClient"); return; }
-        resultText.text = text;
+        uiController.ShowTranscript(text);
         int generation = ++_generation;
         int entryCount = session.Entries.Count;
         BeginProgress("Оценка вашего ответа");
@@ -186,12 +215,17 @@ public string OpponentPromptTemplate = @"
                 if (!IsCurrent(generation, session, entryCount)) return;
                 ++_generation;
                 ParseCategoryAndExplanation(response, out string category, out string explanation);
-                if (category == "Уточнение") { resultText.text = explanation; FinishProcessing("Уточните мысль и повторите запись. HP не изменились."); return; }
-                if (!ResolveCategory(ref category)) { FinishProcessing("Не удалось определить тип ответа. Повторите запись."); return; }
+                if (category == "Уточнение") { uiController.ShowClarification(explanation); FinishProcessing("Уточните мысль и повторите запись. Ход не засчитан."); return; }
+                if (session.AnalyzeResponses && !ResolveCategory(ref category)) { FinishProcessing("Не удалось определить тип ответа. Повторите запись."); return; }
+                if (!session.AnalyzeResponses) { category = "Разбор отключён"; explanation = ""; }
                 gameManager.ApplyPlayerAnswer(text, category, explanation);
-                resultText.text = $"Категория: {category}\nПояснение: {explanation}";
-                FinishProcessing(session.IsGameOver ? "Игра завершена" : "Ход оппонента");
-                if (!session.IsGameOver) StartOpponentTurn();
+                if (session.IsGameOver) FinishProcessing("Диалог завершён");
+                else if (session.AnalyzeResponses)
+                {
+                    _awaitingAnalysisContinue = true;
+                    FinishProcessing("Разбор вашего ответа готов. Нажмите кнопку ниже, когда будете готовы к ответу оппонента.");
+                }
+                else { FinishProcessing("Ход оппонента"); StartOpponentTurn(); }
             },
             error =>
             {
@@ -219,14 +253,19 @@ public string OpponentPromptTemplate = @"
                 if (!IsCurrent(generation, session, entryCount)) return;
                 ++_generation;
                 ParseOpponentResponse(response, out string category, out string explanation, out string answer);
-                if (!ResolveCategory(ref category) || string.IsNullOrWhiteSpace(answer))
+                if (session.AnalyzeResponses && !ResolveCategory(ref category) || string.IsNullOrWhiteSpace(answer))
                 {
                     FinishProcessing("Неверный формат ответа. Нажмите «Повторить ход оппонента».");
                     return;
                 }
+                if (!session.AnalyzeResponses) { category = "Разбор отключён"; explanation = ""; }
                 gameManager.ApplyOpponentAnswer(answer, category, explanation);
-                resultText.text = $"Оппонент: {answer}\nКатегория: {category}";
-                FinishProcessing(session.IsGameOver ? "Игра завершена" : "Ваш ход");
+                if (session.AnalyzeResponses && !session.IsGameOver)
+                {
+                    _awaitingAnalysisContinue = true;
+                    FinishProcessing("Разбор ответа оппонента готов. Нажмите кнопку ниже, чтобы ответить.");
+                }
+                else FinishProcessing(session.IsGameOver ? "Игра завершена" : "Ваш ход");
             },
             error =>
             {
@@ -253,12 +292,16 @@ public string OpponentPromptTemplate = @"
 
     private void RefreshRecordButton()
     {
-        if (recordButton == null) return;
         var session = Session;
-        recordButton.interactable = session != null && !session.IsGameOver && !_isProcessing && !_isInitializing;
+        bool interactable = session != null && !session.IsGameOver && !_isProcessing && !_isInitializing &&
+                            !(uiController != null && uiController.IsPresentingStart);
+        if (recordButton != null) recordButton.interactable = interactable;
+        if (microphoneButton != null) microphoneButton.interactable = interactable;
+        if (recordButton == null) return;
         var label = recordButton.GetComponentInChildren<TMP_Text>();
         if (label != null) label.text = _isProcessing ? "Обработка..." :
             _isInitializing ? "Загрузка..." : _isRecording ? "Остановить" :
+            _awaitingAnalysisContinue && session != null ? (session.IsPlayerTurn ? "Продолжить и записать ответ" : "Продолжить · ответ оппонента") :
             session != null && !session.IsPlayerTurn ? "Повторить ход оппонента" :
             _isInitialized ? "Начать запись" : "Инициализировать";
     }
@@ -276,6 +319,7 @@ public string OpponentPromptTemplate = @"
     {
         ++_generation;
         _awaitingTranscript = false;
+        _awaitingAnalysisContinue = false;
         if (_isRecording) vosk.StopRecognition();
         _isRecording = false;
         _isProcessing = false;
@@ -290,7 +334,15 @@ public string OpponentPromptTemplate = @"
     {
         CancelPendingTurn();
         RefreshRecordButton();
-        if (Session != null && !Session.IsGameOver && !Session.IsPlayerTurn) StartOpponentTurn();
+        if (Session == null || Session.IsGameOver || Session.IsPlayerTurn) return;
+        if (Session.AnalyzeResponses && Session.Entries.Count > 0)
+        {
+            _awaitingAnalysisContinue = true;
+            statusText.text = "Последний разбор сохранён. Нажмите кнопку ниже, чтобы продолжить диалог.";
+            RefreshRecordButton();
+            return;
+        }
+        StartOpponentTurn();
     }
 
     // ---------- Парсинг ----------
@@ -328,6 +380,8 @@ public string OpponentPromptTemplate = @"
         }
 
         answer = answerSb.ToString().Trim();
+        if (string.IsNullOrWhiteSpace(answer) && !string.IsNullOrWhiteSpace(response))
+            answer = response.Trim();
 
 
     }
@@ -343,6 +397,7 @@ public string OpponentPromptTemplate = @"
 **Тема:** {s.TopicDescription}
 **Позиция игрока:** {s.PlayerPosition}
 **Позиция оппонента:** {s.OpponentPosition}
+{(s.IsCustomSituation ? "Это личная ситуация, описанная игроком. Оценивай сказанное бережно, опирайся только на указанный контекст и не выдумывай факты о людях или обстоятельствах." : "")}
 
 **Категории:**
 1. Гарвардский метод
@@ -367,12 +422,26 @@ public string OpponentPromptTemplate = @"
 
     private string BuildOpponentPrompt(GameSession s, string history, string playerAnswer)
     {
+        if (!s.AnalyzeResponses)
+            return $@"Ты — участник переговоров. Отвечай естественно и коротко, отстаивая свою позицию.
+Сложность: {s.OpponentDifficulty}.
+Ситуация: {s.TopicDescription}
+Позиция оппонента: {s.OpponentPosition}
+Позиция игрока: {s.PlayerPosition}
+История диалога:
+{history}
+Последний ответ игрока: {playerAnswer}
+Продолжи разговор по существу. Не выдумывай факты, которых нет в описании. Не добавляй разбор, классификацию, метки или пояснения. Верни только:
+ОТВЕТ: [реплика оппонента]";
+
         string template = OpponentPromptTemplate;
         template = template.Replace("{difficulty}", OpponentDifficulty);
         template = template.Replace("{topic}", s.TopicDescription);
         template = template.Replace("{position}", s.OpponentPosition);
         template = template.Replace("{history}", history);
         template = template.Replace("{playerAnswer}", playerAnswer ?? "");
+        if (s.IsCustomSituation)
+            template = "Ситуация описана игроком из личной жизни. Уважай заданные им границы, не добавляй неподтверждённые факты и не меняй позиции сторон.\n\n" + template;
         return template;
     }
 
@@ -414,6 +483,7 @@ public string OpponentPromptTemplate = @"
     void OnDestroy()
     {
         if (recordButton != null) recordButton.onClick.RemoveListener(OnButtonClicked);
+        if (microphoneButton != null) microphoneButton.onClick.RemoveListener(OnButtonClicked);
         if (vosk != null)
         {
             vosk.OnStatusUpdated -= OnStatusUpdated;

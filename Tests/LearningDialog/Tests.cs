@@ -31,7 +31,21 @@ class Program
    Check(Get<int>(controller,"_turns")==turn+1,"one accepted turn per callback");
   }
   Check(Get<bool>(controller,"_finished")&&!view.RecordButton.interactable,"three replies complete practice");
-  Check(session.Entries.Count==7&&session.PlayerHealth==40&&session.OpponentHealth==40,"symmetric health applied once");
+  Check(session.Entries.Count==7&&session.PlayerHealth==100&&session.OpponentHealth==100,"training replies do not change legacy health");
+  foreach(int limit in new[]{5,10}) foreach(bool first in new[]{true,false}) {
+   var dialog=new GameSession(topic,topic.Positions[0],topic.Positions[1],first){TurnsPerParticipant=limit};
+   for(int i=0;i<limit*2;i++) {
+    bool player=dialog.IsPlayerTurn;
+    Check(dialog.AddEntry(!player,"wrong turn","SPIN","",-15)==null,"out of turn rejected");
+    Check(dialog.AddEntry(player,"reply","SPIN","analysis",-15)!=null,"accepted alternating turn");
+    Check(dialog.AddEntry(player,"duplicate","SPIN","",-15)==null,"duplicate rejected");
+    Check(dialog.IsGameOver==(i==limit*2-1),"ends exactly at turn limit");
+   }
+   Check(dialog.PlayerTurns==limit&&dialog.OpponentTurns==limit,"equal turns for either starting speaker");
+   Check(dialog.PlayerHealth==100&&dialog.OpponentHealth==100,"dialog does not change health");
+   Check(dialog.RollbackTo(limit*2-1)&&!dialog.IsGameOver,"rollback reopens completed dialog");
+   Check(dialog.AddEntry(dialog.IsPlayerTurn,"replayed","SPIN","",0)!=null&&dialog.IsGameOver,"replayed final turn completes dialog");
+  }
   Check(controller.Active.Count==0,"no leftover processing animation");
   controller.StartLesson();int index=client.Requests.Count-1;client.Requests[index].error("network");Check(view.RetryButton.gameObject.activeSelf&&!Get<bool>(controller,"_busy"),"manual retry after error");Call(controller,"Retry");Check(client.Requests.Count==index+2,"retry sends exactly one request");
   Call(controller,"Cancel");client.Requests[client.Requests.Count-1].ok(reply);Check(Get<GameSession>(controller,"_session").Entries.Count==0,"late response ignored after cancel");

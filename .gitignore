@@ -113,3 +113,8 @@ Assets/Vosk_unpacked_model/
 Assets/Resources/HuggingFaceAPIConfig.asset
 
 /NewDesign/
+/Tests/LearningDialog/bin/
+/Tests/LearningDialog/obj/
+
+/Tests/LearningDialog/bin/
+/Tests/LearningDialog/obj/

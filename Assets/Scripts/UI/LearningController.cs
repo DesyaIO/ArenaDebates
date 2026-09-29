@@ -41,7 +41,7 @@ public class LearningController : MonoBehaviour
         ExamplesText.text = _current.Examples;
 
         CompleteButton.onClick.AddListener(OnComplete);
-        BackButton.onClick.AddListener(() => SceneManager.LoadScene("MenuScene"));
+        BackButton.onClick.AddListener(() => { SceneParams.OpenLearningPanelOnMenu = true; SceneManager.LoadScene("MenuScene"); });
     }
 
     void OnComplete()

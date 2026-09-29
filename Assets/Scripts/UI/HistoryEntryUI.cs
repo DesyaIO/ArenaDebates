@@ -26,27 +26,35 @@ public class HistoryEntryUI : MonoBehaviour
         IndexText.text = $"#{entry.Index}";
         TurnText.text = entry.IsPlayerTurn ? "Игрок" : "Оппонент";
         UserText.text = entry.UserText;
-        CategoryText.text = entry.Category;
-        ExplanationText.text = entry.Explanation;
+        bool hasAnalysis = !string.IsNullOrWhiteSpace(entry.Explanation) && entry.Category != "Разбор отключён";
+        CategoryText.text = hasAnalysis ? entry.Category : "Реплика без разбора";
+        ExplanationText.text = hasAnalysis ? entry.Explanation : "";
 
-        // Знак урона: отрицательный — урон, положительный — лечение
-        string damageStr = entry.Damage < 0
-            ? $"Урон: {entry.Damage}"
-            : $"Лечение: +{entry.Damage}";
-        DamageText.text = damageStr;
+        var ink = new Color32(0x1D, 0x36, 0x44, 0xFF);
+        var mutedInk = new Color32(0x5F, 0x73, 0x7D, 0xFF);
+        if (IndexText != null) IndexText.color = mutedInk;
+        if (TurnText != null) TurnText.color = entry.IsPlayerTurn
+            ? ink : new Color32(0xB8, 0x3C, 0x46, 0xFF);
+        if (UserText != null) UserText.color = ink;
+        if (CategoryText != null) CategoryText.color = ink;
+        if (ExplanationText != null) ExplanationText.color = mutedInk;
 
-        HealthText.text = $"HP игрока: {entry.PlayerHealthAfter} | HP оппонента: {entry.OpponentHealthAfter}";
+        if (DamageText != null) DamageText.gameObject.SetActive(false);
+
+        if (HealthText != null) HealthText.gameObject.SetActive(false);
 
         // Цвет фона: игрок — синеватый, оппонент — красноватый
         if (Background != null)
             Background.color = entry.IsPlayerTurn
-                ? new Color(0.2f, 0.3f, 0.5f, 0.6f)
-                : new Color(0.5f, 0.2f, 0.2f, 0.6f);
+                ? new Color32(0xE4, 0xED, 0xF1, 0xFF)
+                : new Color32(0xF5, 0xE5, 0xE6, 0xFF);
 
         // Кнопка отката — только если игра закончена и разрешено
         if (RollbackButton != null)
         {
             RollbackButton.gameObject.SetActive(allowRollback);
+            if (RollbackButton.targetGraphic != null)
+                RollbackButton.targetGraphic.color = new Color32(0xB8, 0x3C, 0x46, 0xFF);
             RollbackButton.onClick.RemoveAllListeners();
             RollbackButton.onClick.AddListener(() => _onRollbackClicked?.Invoke(_entryIndex));
         }

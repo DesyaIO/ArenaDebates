@@ -33,7 +33,12 @@ public class LoginPanel : MonoBehaviour
 
     void OnToggleRegister()
     {
-        _isRegisterMode = !_isRegisterMode;
+        SetRegisterMode(!_isRegisterMode);
+    }
+
+    public void SetRegisterMode(bool register)
+    {
+        _isRegisterMode = register;
         RegisterFieldsPanel.SetActive(_isRegisterMode);
 
         LoginButton.GetComponentInChildren<TMP_Text>().text = _isRegisterMode ? "Зарегистрироваться" : "Войти";

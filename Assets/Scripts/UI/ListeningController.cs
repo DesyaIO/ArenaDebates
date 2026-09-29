@@ -13,6 +13,8 @@ public class ListeningController : MonoBehaviour
     public Slider ProgressSlider;
     public TMP_Text TimeText;
     public Button PlayPauseButton;
+    public Image PlayIcon;
+    public Image PauseIcon;
     public TMP_Text PlayPauseText;
     public Button RewindButton;
     public Button ForwardButton;
@@ -28,6 +30,7 @@ public class ListeningController : MonoBehaviour
 
     public GameObject AnswerPanel;
     public ToggleGroup MethodologyGroup;
+    public TMP_InputField MethodInput;
     public TMP_InputField ArgumentInput;
     public Button SubmitButton;
     public Button AnswerReplayButton;
@@ -59,6 +62,8 @@ public class ListeningController : MonoBehaviour
 
     void Start()
     {
+        ResolveSceneReferences();
+
         var user = UserManager.CurrentUser;
         if (user == null)
         {
@@ -82,9 +87,10 @@ public class ListeningController : MonoBehaviour
             }
         }
 
+        LoadTasksIfMissing();
         if (AllTasks == null || AllTasks.Length == 0)
         {
-            Debug.LogError("AllTasks пустой!");
+            Debug.LogError("ListeningScene: AllTasks пустой, а Resources/ListetingTasks не содержит ListeningTaskSO.", this);
             return;
         }
 
@@ -103,6 +109,8 @@ public class ListeningController : MonoBehaviour
             return;
         }
 
+        if (!ValidateRequiredReferences()) return;
+
         // UI
         QuestionPanel.SetActive(false);
         AnswerPanel.SetActive(false);
@@ -114,8 +122,8 @@ public class ListeningController : MonoBehaviour
         BackButton.onClick.AddListener(() => SceneManager.LoadScene("MenuScene"));
 
         PlayPauseButton.onClick.AddListener(TogglePlay);
-        RewindButton.onClick.AddListener(() => Seek(-10f));
-        ForwardButton.onClick.AddListener(() => Seek(10f));
+        if (RewindButton != null) RewindButton.onClick.AddListener(() => Seek(-10f));
+        if (ForwardButton != null) ForwardButton.onClick.AddListener(() => Seek(10f));
 
         QuestionReplayButton.onClick.AddListener(OnReplayClicked);
         QuestionReadyButton.onClick.AddListener(OnReadyClicked);
@@ -131,9 +139,113 @@ public class ListeningController : MonoBehaviour
         RetryButton.gameObject.SetActive(false);
 
         SubmitButton.interactable = false;
+        MethodInput.onValueChanged.AddListener(_ => OnMethodInputChanged());
+        ArgumentInput.onValueChanged.AddListener(_ => UpdateSubmitState());
         BuildMethodologyToggles();
 
         PlayAudio();
+    }
+
+    private void ResolveSceneReferences()
+    {
+        GameObject canvasObject = GameObject.Find("ArenaCanvas");
+        Transform design = canvasObject != null
+            ? canvasObject.transform.Find("Design378x740")
+            : null;
+
+        if (AudioSource == null)
+        {
+            GameObject sourceObject = GameObject.Find("AudioSource");
+            if (sourceObject != null) AudioSource = sourceObject.GetComponent<AudioSource>();
+        }
+
+        if (design == null) return;
+
+        if (ProgressSlider == null) ProgressSlider = GetComponentAt<Slider>(design, "Progress");
+        if (TimeText == null) TimeText = GetComponentAt<TMP_Text>(design, "Time");
+        if (PlayPauseButton == null) PlayPauseButton = GetComponentAt<Button>(design, "PlayPause");
+        if (PlayIcon == null) PlayIcon = GetComponentAt<Image>(design, "PlayPause/PlayIcon");
+        if (PauseIcon == null) PauseIcon = GetComponentAt<Image>(design, "PlayPause/PauseIcon");
+        if (RewindButton == null) RewindButton = GetComponentAt<Button>(design, "Rewind");
+        if (ForwardButton == null) ForwardButton = GetComponentAt<Button>(design, "Forward");
+        if (AnswerButton == null) AnswerButton = GetComponentAt<Button>(design, "Ready");
+        if (BackButton == null) BackButton = GetComponentAt<Button>(design, "Back");
+
+        if (QuestionPanel == null) QuestionPanel = GetObjectAt(design, "ReplayQuestion");
+        if (QuestionReplayButton == null) QuestionReplayButton = GetComponentAt<Button>(design, "ReplayQuestion/Replay");
+        if (QuestionReadyButton == null) QuestionReadyButton = GetComponentAt<Button>(design, "ReplayQuestion/Ready");
+
+        if (AnswerPanel == null) AnswerPanel = GetObjectAt(design, "Answer");
+        if (MethodologyGroup == null)
+        {
+            Transform methods = design.Find("Answer/Methods");
+            MethodologyGroup = methods != null
+                ? methods.GetComponentInChildren<ToggleGroup>(true)
+                : null;
+        }
+        if (MethodInput == null) MethodInput = GetComponentAt<TMP_InputField>(design, "Answer/MethodInput");
+        if (ArgumentInput == null) ArgumentInput = GetComponentAt<TMP_InputField>(design, "Answer/Argument");
+        if (SubmitButton == null) SubmitButton = GetComponentAt<Button>(design, "Answer/Submit");
+        if (AnswerReplayButton == null) AnswerReplayButton = GetComponentAt<Button>(design, "Answer/ListenAgain");
+
+        if (ResultPanel == null) ResultPanel = GetObjectAt(design, "Result");
+        if (ResultText == null) ResultText = GetComponentAt<TMP_Text>(design, "Result/ResultTitle");
+        if (ExplanationText == null)
+            ExplanationText = GetComponentAt<TMP_Text>(design, "Result/Explanation/Content/ExplanationText");
+        if (NextButton == null) NextButton = GetComponentAt<Button>(design, "Result/Next");
+        if (RetryButton == null) RetryButton = GetComponentAt<Button>(design, "Result/Retry");
+        if (MenuButton == null) MenuButton = GetComponentAt<Button>(design, "Result/Menu");
+    }
+
+    private void LoadTasksIfMissing()
+    {
+        AllTasks = (AllTasks ?? new ListeningTaskSO[0]).Where(task => task != null).ToArray();
+        if (AllTasks.Length > 0) return;
+
+        AllTasks = Resources.LoadAll<ListeningTaskSO>("ListetingTasks");
+        if (AllTasks.Length == 0)
+            AllTasks = Resources.LoadAll<ListeningTaskSO>("ListeningTasks");
+
+        AllTasks = (AllTasks ?? new ListeningTaskSO[0]).Where(task => task != null).ToArray();
+        Debug.Log($"ListeningScene: загружено задач из Resources: {AllTasks.Length}.", this);
+    }
+
+    private bool ValidateRequiredReferences()
+    {
+        var missing = new List<string>();
+        if (AudioSource == null) missing.Add(nameof(AudioSource));
+        if (AnswerButton == null) missing.Add(nameof(AnswerButton));
+        if (QuestionPanel == null) missing.Add(nameof(QuestionPanel));
+        if (QuestionReplayButton == null) missing.Add(nameof(QuestionReplayButton));
+        if (QuestionReadyButton == null) missing.Add(nameof(QuestionReadyButton));
+        if (AnswerPanel == null) missing.Add(nameof(AnswerPanel));
+        if (MethodologyGroup == null) missing.Add(nameof(MethodologyGroup));
+        if (MethodInput == null) missing.Add(nameof(MethodInput));
+        if (ArgumentInput == null) missing.Add(nameof(ArgumentInput));
+        if (SubmitButton == null) missing.Add(nameof(SubmitButton));
+        if (AnswerReplayButton == null) missing.Add(nameof(AnswerReplayButton));
+        if (ResultPanel == null) missing.Add(nameof(ResultPanel));
+        if (NextButton == null) missing.Add(nameof(NextButton));
+        if (RetryButton == null) missing.Add(nameof(RetryButton));
+        if (MenuButton == null) missing.Add(nameof(MenuButton));
+        if (MethodologyTogglePrefab == null) missing.Add(nameof(MethodologyTogglePrefab));
+
+        if (missing.Count == 0) return true;
+
+        Debug.LogError("ListeningScene: не назначены обязательные ссылки: " + string.Join(", ", missing), this);
+        return false;
+    }
+
+    private static GameObject GetObjectAt(Transform root, string path)
+    {
+        Transform item = root != null ? root.Find(path) : null;
+        return item != null ? item.gameObject : null;
+    }
+
+    private static T GetComponentAt<T>(Transform root, string path) where T : Component
+    {
+        Transform item = root != null ? root.Find(path) : null;
+        return item != null ? item.GetComponent<T>() : null;
     }
 
     // ---------- Логика выбора задачи ----------
@@ -196,7 +308,7 @@ public class ListeningController : MonoBehaviour
         _isPaused = false;
         _audioFinished = false;
 
-        PlayPauseText.text = "Пауза";
+        SetPlaybackIcon(true);
     }
 
     void TogglePlay()
@@ -208,15 +320,22 @@ public class ListeningController : MonoBehaviour
             AudioSource.UnPause();
             _isPaused = false;
             _isPlaying = true;
-            PlayPauseText.text = "Пауза";
+            SetPlaybackIcon(true);
         }
         else
         {
             AudioSource.Pause();
             _isPaused = true;
             _isPlaying = false;
-            PlayPauseText.text = "Играть";
+            SetPlaybackIcon(false);
         }
+    }
+
+    void SetPlaybackIcon(bool playing)
+    {
+        if (PlayIcon != null) PlayIcon.gameObject.SetActive(!playing);
+        if (PauseIcon != null) PauseIcon.gameObject.SetActive(playing);
+        if (PlayPauseText != null) PlayPauseText.text = playing ? "Пауза" : "Играть";
     }
 
     void Seek(float seconds)
@@ -236,7 +355,7 @@ public class ListeningController : MonoBehaviour
             _isPlaying = false;
             _isPaused = false;
 
-            PlayPauseText.text = "Играть";
+            SetPlaybackIcon(false);
             UpdateProgressUI();
 
             OnAudioFinished();
@@ -289,7 +408,7 @@ public class ListeningController : MonoBehaviour
         _isPlaying = false;
         _isPaused = false;
 
-        PlayPauseText.text = "Играть";
+        SetPlaybackIcon(false);
 
         if (!_askedAboutReplay)
         {
@@ -326,10 +445,34 @@ public class ListeningController : MonoBehaviour
 
     void BuildMethodologyToggles()
     {
-        foreach (Transform child in MethodologyGroup.transform)
-            Destroy(child.gameObject);
+        Transform toggleContainer = MethodologyGroup.transform;
+        ScrollRect methodsScroll = MethodologyGroup.GetComponentInParent<ScrollRect>();
+        VisibleScrollbar.Ensure(methodsScroll);
+        if (methodsScroll != null && methodsScroll.content != null)
+        {
+            toggleContainer = methodsScroll.content;
+        }
+        else
+        {
+            Transform content = MethodologyGroup.transform.Find("Content");
+            if (content != null) toggleContainer = content;
+        }
 
-        if (_currentTask.AvailableMethodologies == null) return;
+        // Keep the ScrollRect, layout and decorative children intact; only clear
+        // previously generated method choices.
+        for (int i = toggleContainer.childCount - 1; i >= 0; i--)
+        {
+            Transform child = toggleContainer.GetChild(i);
+            if (child.GetComponent<Toggle>() != null)
+                Destroy(child.gameObject);
+        }
+
+        if (_currentTask.AvailableMethodologies == null || _currentTask.AvailableMethodologies.Length == 0)
+        {
+            Debug.LogError($"У задачи '{_currentTask.TaskId}' не заданы варианты методов.", this);
+            SubmitButton.interactable = false;
+            return;
+        }
 
         if (MethodologyTogglePrefab == null)
         {
@@ -338,39 +481,70 @@ public class ListeningController : MonoBehaviour
         }
 
         List<string> methods = new List<string>(_currentTask.AvailableMethodologies);
-        ShuffleList(methods);
-
-        Toggle firstToggle = null;
+        MethodologyGroup.allowSwitchOff = true;
+        MethodInput.SetTextWithoutNotify(string.Empty);
 
         foreach (string method in methods)
         {
-            var go = Instantiate(MethodologyTogglePrefab, MethodologyGroup.transform);
+            var go = Instantiate(MethodologyTogglePrefab, toggleContainer);
             go.name = method;
 
             var toggle = go.GetComponent<Toggle>();
             var label = go.GetComponentInChildren<TMP_Text>();
 
-            if (label != null) label.text = method;
-            if (toggle != null)
+            if (toggle == null)
             {
-                toggle.group = MethodologyGroup;
-                toggle.isOn = false;
-
-                toggle.onValueChanged.AddListener(isOn =>
-                {
-                    if (isOn) OnToggleGroupChanged();
-                });
-
-                if (firstToggle == null)
-                    firstToggle = toggle;
+                Debug.LogError("В MethodologyTogglePrefab отсутствует компонент Toggle.", go);
+                Destroy(go);
+                continue;
             }
+
+            if (label != null)
+            {
+                label.text = method;
+                label.fontSize = 14;
+                label.alignment = TextAlignmentOptions.Center;
+            }
+
+            float width = label != null
+                ? Mathf.Clamp(Mathf.Ceil(label.GetPreferredValues(method).x) + 28f, 70f, 245f)
+                : 110f;
+            var rect = go.GetComponent<RectTransform>();
+            if (rect != null) rect.sizeDelta = new Vector2(width, 50f);
+            var layout = go.GetComponent<LayoutElement>();
+            if (layout != null)
+            {
+                layout.preferredWidth = width;
+                layout.preferredHeight = 50f;
+            }
+            Transform fill = go.transform.Find("FrostedFill");
+            if (fill is RectTransform fillRect)
+            {
+                fillRect.anchorMin = Vector2.zero;
+                fillRect.anchorMax = Vector2.one;
+                fillRect.offsetMin = Vector2.one;
+                fillRect.offsetMax = -Vector2.one;
+            }
+            if (label != null && label.rectTransform != null)
+            {
+                var labelRect = label.rectTransform;
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = new Vector2(8f, 0f);
+                labelRect.offsetMax = new Vector2(-8f, 0f);
+            }
+            toggle.group = MethodologyGroup;
+            toggle.isOn = false;
+
+            toggle.onValueChanged.AddListener(isOn =>
+            {
+                if (!isOn) return;
+                MethodInput.SetTextWithoutNotify(method);
+                UpdateSubmitState();
+            });
         }
 
-        if (firstToggle != null)
-        {
-            firstToggle.SetIsOnWithoutNotify(true);
-            OnToggleGroupChanged();
-        }
+        UpdateSubmitState();
     }
 
     void OpenAnswerPanel()
@@ -378,14 +552,16 @@ public class ListeningController : MonoBehaviour
         AnswerPanel.SetActive(true);
     }
 
-    void OnToggleGroupChanged()
+    void OnMethodInputChanged()
     {
-        bool anyOn = false;
-        foreach (var t in MethodologyGroup.GetComponentsInChildren<Toggle>())
-        {
-            if (t.isOn) { anyOn = true; break; }
-        }
-        SubmitButton.interactable = anyOn;
+        MethodologyGroup.SetAllTogglesOff(false);
+        UpdateSubmitState();
+    }
+
+    void UpdateSubmitState()
+    {
+        SubmitButton.interactable = !string.IsNullOrWhiteSpace(MethodInput.text)
+            && !string.IsNullOrWhiteSpace(ArgumentInput.text);
     }
 
     void OnReplayFromAnswerPanel()
@@ -396,26 +572,25 @@ public class ListeningController : MonoBehaviour
 
     void OnSubmit()
     {
-        string selected = "";
-        foreach (var t in MethodologyGroup.GetComponentsInChildren<Toggle>())
-        {
-            if (t.isOn) { selected = t.name; break; }
-        }
+        string selected = MethodInput.text.Trim();
 
-        if (string.IsNullOrEmpty(selected)) return;
+        if (string.IsNullOrEmpty(selected) || string.IsNullOrWhiteSpace(ArgumentInput.text)) return;
 
         AnswerPanel.SetActive(false);
         ResultPanel.SetActive(true);
 
-        bool correct = selected == _currentTask.CorrectMethodology;
+        bool correct = string.Equals(selected, _currentTask.CorrectMethodology, System.StringComparison.OrdinalIgnoreCase);
 
         _wasNewTask = !_activeGoal.IsTaskSolved(_currentTask.TaskId);
 
-        ResultText.text = correct
-            ? $"✅ Верно! {_currentTask.CorrectMethodology}"
-            : $"❌ Неверно. Правильный ответ: {_currentTask.CorrectMethodology}";
+        if (ResultText != null)
+        {
+            ResultText.text = correct
+                ? $"✅ Верно! {_currentTask.CorrectMethodology}"
+                : $"❌ Неверно. Правильный ответ: {_currentTask.CorrectMethodology}";
+        }
 
-        ExplanationText.text = _currentTask.CorrectExplanation;
+        if (ExplanationText != null) ExplanationText.text = _currentTask.CorrectExplanation;
 
         if (correct)
         {

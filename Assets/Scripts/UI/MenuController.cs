@@ -6,8 +6,21 @@ using TMPro;
 
 public static class SceneParams
 {
+    public const string FreeDialogueVictoryKey = "free_dialogue_first_victory";
+    public const string FreeDialogueVictoryTitle = "ЭПИЛОГ / ПОБЕДА";
+    public const string FreeDialogueVictorySubtitle = "СВОБОДНЫЙ ДИАЛОГ · ВОЗВРАЩЕНИЕ В МЕНЮ";
+    public const string FreeDialogueVictoryText = "Это был тяжелый путь, но я справился! Я превзошел по силе сверхчеловека и стал для этих машин лидером. Теперь я могу вернуть всё на свои места. Власть снова будет принадлежать людям. Впереди меня ждет много работы, но я уже владею всеми нужными мне навыками. И точно знаю, что я могу всё!";
+    public const string FreeDialogueLossTitle = "ЗАПИСЬ / СВОБОДНЫЙ ДИАЛОГ";
+    public const string FreeDialogueLossSubtitle = "ПОРАЖЕНИЕ · НУЖНО ПРОДОЛЖАТЬ ТРЕНИРОВАТЬСЯ";
+    public const string FreeDialogueLossText = "Мне нужно еще много тренироваться, чтобы превзойти «ума». Но я точно знаю, что победа будет за мной!";
+
     public static string SelectedLearningMethod = "";
     public static bool OpenLearningPanelOnMenu;
+    public static bool ShowPrologueOnMenu;
+    public static string PendingMenuStoryKey;
+    public static string PendingMenuStoryTitle;
+    public static string PendingMenuStorySubtitle;
+    public static string PendingMenuStoryText;
 }
 
 public class MenuController : MonoBehaviour
@@ -18,6 +31,9 @@ public class MenuController : MonoBehaviour
     public Button FreeDialogueButton;
     public Button GoalButton;
     public Button LogoutButton;
+    public Button ArchiveNavigationButton, ArchiveCloseButton, ArchiveListeningButton;
+    public TMP_Text ArchiveProgressText, MapProgressText;
+    public GameObject ProloguePanel;
 
     [Header("UI статуса")]
     public TMP_Text ListeningStatusText;
@@ -45,6 +61,8 @@ public class MenuController : MonoBehaviour
     [Header("Контент")]
     public LearningContentSO[] AllLearningContent;
 
+    private MenuNarrativeOverlay _narrativeOverlay;
+
     void Start()
     {
         if (UserManager.CurrentUser == null)
@@ -64,13 +82,18 @@ public class MenuController : MonoBehaviour
         AddListener(FreeDialogueButton, OpenDialoguePanel);
         AddListener(GoalButton, OpenGoalSetup);
         AddListener(LogoutButton, OnLogout);
+        AddListener(ArchiveNavigationButton, OpenLearningPanel);
+        AddListener(ArchiveCloseButton, CloseLearningPanel);
+        AddListener(ArchiveListeningButton, OpenListeningPanel);
 
         AddListener(ListeningStartButton, StartListening);
         AddListener(ListeningCloseButton, CloseListeningPanel);
 
         // Панель диалогов
         AddListener(LearningDialogButton, StartLearningDialogue);
-        AddListener(FreeDialogButton, () => SceneManager.LoadScene("DialogScene"));
+        AddListener(FreeDialogButton, () => DialogueOptions.Show(
+            FreeDialogButton.GetComponentInChildren<TMP_Text>().font,
+            () => SceneManager.LoadScene("DialogScene")));
         AddListener(DialogueCloseButton, CloseDialoguePanel);
 
         // Прячем панели
@@ -79,12 +102,29 @@ public class MenuController : MonoBehaviour
         if (DialoguePanel != null) DialoguePanel.SetActive(false);
 
         UpdateUI();
-
-        if (SceneParams.OpenLearningPanelOnMenu)
+        if (ProloguePanel != null)
         {
-            SceneParams.OpenLearningPanelOnMenu = false;
-            OpenLearningPanel();
+            ProloguePanel.SetActive(SceneParams.ShowPrologueOnMenu);
+            SceneParams.ShowPrologueOnMenu = false;
         }
+
+        if (!string.IsNullOrWhiteSpace(SceneParams.PendingMenuStoryText))
+        {
+            string key = SceneParams.PendingMenuStoryKey;
+            string title = SceneParams.PendingMenuStoryTitle;
+            string subtitle = SceneParams.PendingMenuStorySubtitle;
+            string text = SceneParams.PendingMenuStoryText;
+            SceneParams.PendingMenuStoryKey = null;
+            SceneParams.PendingMenuStoryTitle = null;
+            SceneParams.PendingMenuStorySubtitle = null;
+            SceneParams.PendingMenuStoryText = null;
+
+            if (string.IsNullOrWhiteSpace(key) || !PlayerProgress.HasSeenNarrative(key))
+                ShowNarrative(title, subtitle, text, key, OpenLearningPanelIfRequested);
+            else
+                OpenLearningPanelIfRequested();
+        }
+        else OpenLearningPanelIfRequested();
     }
 
     void UpdateUI()
@@ -110,6 +150,9 @@ public class MenuController : MonoBehaviour
                 completed++;
 
         LearningStatusText.text = $"Изучено: {completed} / {totalMethods}";
+        if (ArchiveProgressText != null) ArchiveProgressText.text = $"Прочитано {completed} из {totalMethods} материалов";
+        if (ArchiveListeningButton != null) ArchiveListeningButton.interactable = listeningUnlocked;
+        if (MapProgressText != null) MapProgressText.text = $"Пройдено {(allLearningDone ? 1 : 0) + (PlayerProgress.IsAllListeningDone() ? 1 : 0)} из 3 модулей";
 
         bool allListeningDone = PlayerProgress.ListeningSolved >= PlayerProgress.TotalListeningTasks;
         bool freeDialogueUnlocked = listeningUnlocked && allListeningDone;
@@ -121,7 +164,7 @@ public class MenuController : MonoBehaviour
         {
             FreeDialogueStatusText.text = freeDialogueUnlocked
                 ? "Свободный и учебный режим"
-                : "Откройте и выберите режим";
+                : "Открывается после обучения и аудирования";
         }
 
         if (GoalStatusText != null && activeGoal != null)
@@ -173,6 +216,18 @@ public class MenuController : MonoBehaviour
 
     void OpenLearningPanel()
     {
+        if (ShowNarrativeIfFirstTime(
+            "module_1_first_open",
+            "ЗАПИСЬ / 001",
+            "МОДУЛЬ 01 · ТАЙНЫЙ АРХИВ",
+            "Говорят, что «умы» освоили секретные техники и методики ведения переговоров. Они стали всесильны. Чтобы их подчинить своей власти, я должен стать сильнее и умнее их. Когда я добрался до тайных архивов, мне удалось найти засекреченные файлы, которые когда-то послужили основой для обучения сверхчеловека. Нужно их срочно изучить. Ведь именно я могу всё изменить!"))
+            return;
+
+        OpenLearningPanelContent();
+    }
+
+    private void OpenLearningPanelContent()
+    {
         ShowPanel(LearningPanel);
         RefreshLearningList();
     }
@@ -194,6 +249,7 @@ public class MenuController : MonoBehaviour
             return;
         }
 
+        int dossierIndex = 0;
         foreach (var content in filteredContent)
         {
             var go = Instantiate(LearningButtonPrefab, LearningListContainer);
@@ -206,6 +262,8 @@ public class MenuController : MonoBehaviour
             text.text = completed
                 ? $"{content.MethodologyName} ✅"
                 : content.MethodologyName;
+            var card = go.GetComponent<ArenaArchiveCard>();
+            if (card != null) card.Bind(content.MethodologyName, ++dossierIndex, completed);
 
             btn.interactable = true;
 
@@ -224,6 +282,14 @@ public class MenuController : MonoBehaviour
 
     void OpenListeningPanel()
     {
+        if (ListeningButton != null && !ListeningButton.interactable) return;
+        if (ShowNarrativeIfFirstTime(
+            "module_2_first_open",
+            "ЗАПИСЬ / 002",
+            "МОДУЛЬ 02 · ПОДСЛУШАННЫЙ РАЗГОВОР",
+            "Теперь я владею важной информацией, которая поможет мне в любом диалоге. Ведь главная сила — это слово. Возвращаясь по длинным коридорам, я услышал, как двое «умов» разговаривают. Нужно затаиться и подслушать их. Ведь я должен понять, как именно они используют разговорные техники."))
+            return;
+
         ShowPanel(ListeningPanel);
         RefreshListeningPanel();
     }
@@ -245,7 +311,44 @@ public class MenuController : MonoBehaviour
 
     void OpenDialoguePanel()
     {
+        if (FreeDialogueButton != null && !FreeDialogueButton.interactable) return;
+        if (ShowNarrativeIfFirstTime(
+            "module_3_first_open",
+            "ЗАПИСЬ / 003",
+            "МОДУЛЬ 03 · ДИАЛОГИ",
+            "Отлично, теперь я тоже владею всеми навыками переговоров! Самое время использовать их на практике и сразиться со сверхчеловеком!"))
+            return;
+
         ShowPanel(DialoguePanel);
+    }
+
+    private bool ShowNarrativeIfFirstTime(string key, string title, string subtitle, string text)
+    {
+        if (PlayerProgress.HasSeenNarrative(key)) return false;
+        ShowNarrative(title, subtitle, text, key, null);
+        return true;
+    }
+
+    private void ShowNarrative(string title, string subtitle, string text, string key, System.Action onNext)
+    {
+        if (_narrativeOverlay == null)
+        {
+            TMP_FontAsset font = LearningStatusText != null ? LearningStatusText.font : TMP_Settings.defaultFontAsset;
+            _narrativeOverlay = MenuNarrativeOverlay.Create(font);
+        }
+
+        _narrativeOverlay.Show(title, subtitle, text, () =>
+        {
+            if (!string.IsNullOrWhiteSpace(key)) PlayerProgress.MarkNarrativeSeen(key);
+            onNext?.Invoke();
+        });
+    }
+
+    private void OpenLearningPanelIfRequested()
+    {
+        if (!SceneParams.OpenLearningPanelOnMenu) return;
+        SceneParams.OpenLearningPanelOnMenu = false;
+        OpenLearningPanel();
     }
 
     public void CloseDialoguePanel() => DialoguePanel.SetActive(false);

@@ -29,6 +29,13 @@ public class SessionManager : MonoBehaviour
         if (AutoSave) Save();
     }
 
+    public void StartNewSession(string topic, string playerPosition, string opponentPosition, bool playerFirst)
+    {
+        CurrentSession = new GameSession(topic, playerPosition, opponentPosition, playerFirst);
+        Debug.Log($"Новая пользовательская ситуация: {CurrentSession.SessionId}");
+        if (AutoSave) Save();
+    }
+
     public void Save()
     {
         if (CurrentSession == null) return;

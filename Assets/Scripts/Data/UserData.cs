@@ -55,6 +55,10 @@ public class UserData
     public int TotalPoints;
     public List<string> Rewards = new List<string>();
 
+    // Истории, которые пользователь уже просмотрел. Это отдельный список,
+    // чтобы сюжетный прогресс не смешивался с наградами.
+    public List<string> SeenNarrativeKeys = new List<string>();
+
     public UserData() { }
 
     public UserData(string login, string password, string fullName)
@@ -119,5 +123,7 @@ public class UserData
         ActiveGoalIndex = -1;
         TotalPoints = 0;
         Rewards.Clear();
+        if (SeenNarrativeKeys == null) SeenNarrativeKeys = new List<string>();
+        else SeenNarrativeKeys.Clear();
     }
 }

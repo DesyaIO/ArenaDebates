@@ -10,12 +10,18 @@ public class GameSession
     public string TopicDescription;  // Формулировка темы
     public string PlayerPosition;    // Какую позицию выбрал игрок
     public string OpponentPosition;  // Противоположная позиция
+    public bool IsCustomSituation;
+    public bool AnalyzeResponses = true;
 
     public int PlayerHealth = 100;
     public int OpponentHealth = 100;
 
     public bool PlayerGoesFirst;
     public bool IsGameOver;
+    public int TurnsPerParticipant = 5;
+    public string OpponentDifficulty = "Средний";
+    public int PlayerTurns => Entries.FindAll(e => e.IsPlayerTurn).Count;
+    public int OpponentTurns => Entries.Count - PlayerTurns;
 
     public List<DialogueEntry> Entries = new List<DialogueEntry>();
     public string CreatedAt;
@@ -33,30 +39,33 @@ public class GameSession
         CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
     }
 
+    public GameSession(string topic, string playerPosition, string opponentPosition, bool playerFirst)
+    {
+        SessionId = Guid.NewGuid().ToString();
+        Category = "Моя ситуация";
+        TopicDescription = topic?.Trim() ?? "";
+        PlayerPosition = playerPosition?.Trim() ?? "";
+        OpponentPosition = opponentPosition?.Trim() ?? "";
+        PlayerGoesFirst = playerFirst;
+        IsCustomSituation = true;
+        CreatedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
     public bool IsPlayerTurn => !IsGameOver &&
         (Entries.Count == 0 ? PlayerGoesFirst : !Entries[Entries.Count - 1].IsPlayerTurn);
 
     public DialogueEntry AddEntry(bool isPlayer, string text, string category,
                                   string explanation, int damage)
     {
-        // Повторный ответ той же стороны не меняет HP и историю.
+        // Only accepted replies count. Retries and duplicate callbacks do not.
         if (IsGameOver || isPlayer != IsPlayerTurn) return null;
         int idx = Entries.Count + 1;
 
-        if (isPlayer)
-            OpponentHealth += damage;   // damage отрицательный = урон
-        else
-            PlayerHealth += damage;
-
-        PlayerHealth = Mathf.Clamp(PlayerHealth, 0, 100);
-        OpponentHealth = Mathf.Clamp(OpponentHealth, 0, 100);
-
-        var entry = new DialogueEntry(idx, isPlayer, text, category, explanation, damage,
+        var entry = new DialogueEntry(idx, isPlayer, text, category, explanation, 0,
                                       PlayerHealth, OpponentHealth);
         Entries.Add(entry);
 
-        if (PlayerHealth <= 0 || OpponentHealth <= 0)
-            IsGameOver = true;
+        IsGameOver = TurnsPerParticipant > 0 && PlayerTurns >= TurnsPerParticipant && OpponentTurns >= TurnsPerParticipant;
 
         return entry;
     }
@@ -84,7 +93,7 @@ public class GameSession
             OpponentHealth = 100;
         }
 
-        IsGameOver = PlayerHealth <= 0 || OpponentHealth <= 0;
+        IsGameOver = TurnsPerParticipant > 0 && PlayerTurns >= TurnsPerParticipant && OpponentTurns >= TurnsPerParticipant;
         return true;
     }
 

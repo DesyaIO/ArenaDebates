@@ -18,6 +18,8 @@ public class HistoryUIController : MonoBehaviour
 
     void Awake()
     {
+        if (EntriesContainer != null)
+            VisibleScrollbar.Ensure(EntriesContainer.GetComponentInParent<ScrollRect>());
         if (CloseButton != null)
             CloseButton.onClick.AddListener(Hide);
     }

@@ -29,6 +29,7 @@ public class GoalSetupPanel : MonoBehaviour
 
     void Start()
     {
+        VisibleScrollbar.Ensure(SelectionScroll);
         IndustryButton.onClick.AddListener(OpenIndustries);
         GoalButton.onClick.AddListener(OpenGoals);
         SaveButton.onClick.AddListener(OnSave);
@@ -64,7 +65,7 @@ public class GoalSetupPanel : MonoBehaviour
         IndustryText.text = string.IsNullOrEmpty(_selectedIndustry) ? "Выбрать отрасль  ›" : _selectedIndustry + "  ›";
         GoalText.text = _selectedGoal == null ? "Выбрать цель  ›" : _selectedGoal.GoalText + "  ›";
         MethodsText.text = _selectedGoal == null ? "Выберите цель, чтобы увидеть программу обучения."
-            : string.Join("\n\n", _selectedGoal.Methods.ConvertAll(m => "•  " + m));
+            : string.Join("\n", _selectedGoal.Methods.ConvertAll(m => "•  " + m));
         IndustryButton.interactable = !_saving && _goalDb != null && _goalDb.Industries.Count > 0;
         GoalButton.interactable = !_saving && !string.IsNullOrEmpty(_selectedIndustry);
         SaveButton.interactable = !_saving && _selectedGoal != null && _selectedGoal.Methods.Count > 0;
@@ -86,14 +87,14 @@ public class GoalSetupPanel : MonoBehaviour
         var button = Instantiate(SelectionRowTemplate, SelectionContent);
         var rect = (RectTransform)button.transform;
         float top = 0;
-        foreach (var row in _rows) top += ((RectTransform)row.transform).sizeDelta.y + 18;
+        foreach (var row in _rows) top += ((RectTransform)row.transform).sizeDelta.y + 8;
         rect.anchorMin = new Vector2(0, 1);
         rect.anchorMax = new Vector2(1, 1);
         rect.pivot = new Vector2(.5f, 1);
         rect.sizeDelta = new Vector2(-12, height);
         rect.anchoredPosition = new Vector2(0, -top);
         button.GetComponentInChildren<TMP_Text>(true).text = text;
-        button.GetComponent<Image>().color = selected ? new Color(.08f, .35f, .39f) : new Color(.07f, .12f, .20f);
+        button.GetComponent<Image>().color = selected ? new Color(.80f, .89f, .94f) : new Color(.97f, .985f, .99f);
         button.onClick.AddListener(() => onClick());
         button.gameObject.SetActive(true);
         _rows.Add(button.gameObject);
@@ -114,8 +115,8 @@ public class GoalSetupPanel : MonoBehaviour
         foreach (var industry in _goalDb.Industries)
         {
             var item = industry;
-            AddRow(item.Industry + "\n<size=25><color=#B7C9DF>Целей: " + item.Goals.Count + "</color></size>",
-                item.Industry == _selectedIndustry, 145, () =>
+            AddRow(item.Industry + "\n<size=11><color=#60717C>Целей: " + item.Goals.Count + "</color></size>",
+                item.Industry == _selectedIndustry, 60, () =>
                 {
                     if (_selectedIndustry != item.Industry) _selectedGoal = null;
                     _selectedIndustry = item.Industry;
@@ -134,8 +135,8 @@ public class GoalSetupPanel : MonoBehaviour
         foreach (var goal in industry.Goals)
         {
             var item = goal;
-            AddRow(item.GoalText + "\n\n<size=25><color=#B7C9DF>" + string.Join(" • ", item.Methods) + "</color></size>",
-                item == _selectedGoal, 230, () =>
+            AddRow(item.GoalText + "\n\n<size=11><color=#60717C>" + string.Join(" • ", item.Methods) + "</color></size>",
+                item == _selectedGoal, 110, () =>
                 {
                     _selectedGoal = item;
                     CloseSelection();
@@ -155,7 +156,9 @@ public class GoalSetupPanel : MonoBehaviour
             MessageText.text = "Сначала войдите в аккаунт через кнопку «Выйти».";
             return;
         }
+        bool firstGoal = !UserManager.CurrentUser.HasActiveGoal();
         UserManager.SetActiveGoal(_selectedIndustry, _selectedGoal.GoalText, _selectedGoal.Methods);
+        SceneParams.ShowPrologueOnMenu = firstGoal;
         SceneParams.SelectedLearningMethod = _selectedGoal.Methods[0];
         _saving = true;
         Refresh();

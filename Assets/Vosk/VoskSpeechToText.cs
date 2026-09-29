@@ -50,9 +50,9 @@ public class VoskSpeechToText : MonoBehaviour
     private string _grammar = "";
 
     // Flags
-    private bool _isDecompressing;
     private bool _isInitializing;
     private bool _didInit;
+    private string _initializationError;
 
     // Threading
     private volatile bool _running;
@@ -102,14 +102,55 @@ public class VoskSpeechToText : MonoBehaviour
     private IEnumerator DoStartVoskStt(bool startMicrophone)
     {
         _isInitializing = true;
-        yield return WaitForMicrophoneInput();
-
+        _initializationError = null;
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
+        {
+            UnityEngine.Android.Permission.RequestUserPermission(UnityEngine.Android.Permission.Microphone);
+            float permissionDeadline = Time.realtimeSinceStartup + 20f;
+            while (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone)
+                   && Time.realtimeSinceStartup < permissionDeadline)
+                yield return null;
+            if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission(UnityEngine.Android.Permission.Microphone))
+            {
+                FailInitialization("Разрешите доступ к микрофону в настройках приложения.");
+                yield break;
+            }
+        }
+#endif
         yield return Decompress();
+        if (!string.IsNullOrEmpty(_initializationError))
+        {
+            FailInitialization(_initializationError);
+            yield break;
+        }
 
         OnStatusUpdated?.Invoke("Loading Model from: " + _decompressedModelPath);
-        _model = new Model(_decompressedModelPath);
+        try
+        {
+            _model = new Model(_decompressedModelPath);
+        }
+        catch (DllNotFoundException exception)
+        {
+            _initializationError = "Не найдена библиотека libvosk.dll в сборке: " + exception.Message;
+        }
+        catch (Exception exception)
+        {
+            _initializationError = "Не удалось загрузить модель Vosk: " + exception.Message;
+        }
+        if (!string.IsNullOrEmpty(_initializationError))
+        {
+            FailInitialization(_initializationError);
+            yield break;
+        }
 
         yield return null;
+
+        if (VoiceProcessor == null)
+        {
+            FailInitialization("Не назначен VoiceProcessor.");
+            yield break;
+        }
 
         VoiceProcessor.OnFrameCaptured += VoiceProcessorOnFrameCaptured;
         VoiceProcessor.OnRecordingStop += VoiceProcessorOnRecordingStop;
@@ -134,14 +175,33 @@ public class VoskSpeechToText : MonoBehaviour
             return false;
         }
         if (_running || _finishing || (_worker != null && !_worker.IsCompleted)) return false;
+        VoiceProcessor.UpdateDevices();
+        if (Microphone.devices.Length == 0)
+        {
+            OnStatusUpdated?.Invoke("Error: Микрофон не найден или доступ к нему запрещён в Windows.");
+            return false;
+        }
 
         // Очищаем накопленный текст перед новой сессией
         _accumulatedText.Clear();
         while (_threadedResultQueue.TryDequeue(out _)) { }
         while (_threadedBufferQueue.TryDequeue(out _)) { }
 
+        try
+        {
+            VoiceProcessor.StartRecording();
+        }
+        catch (Exception exception)
+        {
+            OnStatusUpdated?.Invoke("Error: Не удалось включить микрофон: " + exception.Message);
+            return false;
+        }
+        if (!VoiceProcessor.IsRecording)
+        {
+            OnStatusUpdated?.Invoke("Error: Микрофон не начал запись. Проверьте разрешение на доступ к микрофону.");
+            return false;
+        }
         _running = true;
-        VoiceProcessor.StartRecording();
         _worker = Task.Run(ThreadedWork);
         Debug.Log("Recognition started");
         return true;
@@ -266,61 +326,74 @@ public class VoskSpeechToText : MonoBehaviour
 
     private IEnumerator Decompress()
     {
-        if (!Path.HasExtension(ModelPath) ||
-            Directory.Exists(Path.Combine(Application.persistentDataPath,
-                Path.GetFileNameWithoutExtension(ModelPath))))
+        string modelFolder = Path.Combine(Application.persistentDataPath,
+            Path.GetFileNameWithoutExtension(ModelPath));
+        if (Directory.Exists(modelFolder) && File.Exists(Path.Combine(modelFolder, "am", "final.mdl")))
         {
             OnStatusUpdated?.Invoke("Using existing decompressed model.");
-            _decompressedModelPath = Path.Combine(Application.persistentDataPath,
-                Path.GetFileNameWithoutExtension(ModelPath));
+            _decompressedModelPath = modelFolder;
             yield break;
         }
 
         OnStatusUpdated?.Invoke("Decompressing model...");
         string dataPath = Path.Combine(Application.streamingAssetsPath, ModelPath);
 
-        Stream dataStream;
+        Stream dataStream = null;
         if (dataPath.Contains("://"))
         {
             UnityWebRequest www = UnityWebRequest.Get(dataPath);
-            www.SendWebRequest();
-            while (!www.isDone) yield return null;
+            yield return www.SendWebRequest();
+            if (www.result != UnityWebRequest.Result.Success)
+            {
+                _initializationError = "Не удалось прочитать ZIP-модель из StreamingAssets: " + www.error;
+                www.Dispose();
+                yield break;
+            }
             dataStream = new MemoryStream(www.downloadHandler.data);
+            www.Dispose();
         }
         else
         {
-            dataStream = File.OpenRead(dataPath);
+            try { dataStream = File.OpenRead(dataPath); }
+            catch (Exception exception)
+            {
+                _initializationError = "ZIP-модель Vosk не найдена в StreamingAssets: " + exception.Message;
+            }
+            if (!string.IsNullOrEmpty(_initializationError)) yield break;
         }
 
-        var zipFile = ZipFile.Read(dataStream);
-        zipFile.ExtractProgress += ZipFileOnExtractProgress;
+        try
+        {
+            using (dataStream)
+            using (var zipFile = ZipFile.Read(dataStream))
+            {
+                OnStatusUpdated?.Invoke("Reading Zip file");
+                zipFile.ExtractAll(Application.persistentDataPath, ExtractExistingFileAction.OverwriteSilently);
+            }
+        }
+        catch (Exception exception)
+        {
+            _initializationError = "Не удалось распаковать модель Vosk: " + exception.Message;
+        }
+        if (!string.IsNullOrEmpty(_initializationError)) yield break;
 
-        OnStatusUpdated?.Invoke("Reading Zip file");
-        zipFile.ExtractAll(Application.persistentDataPath);
-
-        while (!_isDecompressing) yield return null;
-
-        _decompressedModelPath = Path.Combine(Application.persistentDataPath,
-            Path.GetFileNameWithoutExtension(ModelPath));
+        _decompressedModelPath = modelFolder;
+        if (!File.Exists(Path.Combine(modelFolder, "am", "final.mdl")))
+        {
+            _initializationError = "ZIP-модель Vosk распакована не полностью: отсутствует am/final.mdl.";
+            yield break;
+        }
 
         OnStatusUpdated?.Invoke("Decompressing complete!");
-        yield return new WaitForSeconds(1);
-        zipFile.Dispose();
+        yield return null;
     }
 
-    private void ZipFileOnExtractProgress(object sender, ExtractProgressEventArgs e)
+    private void FailInitialization(string message)
     {
-        if (e.EventType == ZipProgressEventType.Extracting_AfterExtractAll)
-        {
-            _isDecompressing = true;
-            _decompressedModelPath = e.ExtractLocation;
-        }
-    }
-
-    private IEnumerator WaitForMicrophoneInput()
-    {
-        while (Microphone.devices.Length <= 0)
-            yield return null;
+        _isInitializing = false;
+        _didInit = false;
+        Debug.LogError("Vosk: " + message, this);
+        OnStatusUpdated?.Invoke("Error: " + message);
     }
 
     /// <summary>

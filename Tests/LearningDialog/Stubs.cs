@@ -22,13 +22,16 @@ namespace UnityEngine {
  public class WaitForSecondsRealtime {public WaitForSecondsRealtime(float x){} }
 }
 namespace UnityEngine.Serialization { public class FormerlySerializedAsAttribute:Attribute {public FormerlySerializedAsAttribute(string s){} } }
-namespace TMPro {public class TMP_Text {public string text;} }
+namespace TMPro {public class TMP_Text {public string text;public GameObject gameObject=new();} }
 namespace UnityEngine.UI {public class Button {public UnityEngine.GameObject gameObject=new();public bool interactable;public Event onClick=new(); public TMPro.TMP_Text label=new();public T GetComponentInChildren<T>() where T:class =>label as T;public class Event { public void AddListener(Action a){} public void RemoveListener(Action a){} }} }
 public class VoskSpeechToText {public Action<string> OnStatusUpdated,OnTranscriptionResult;public float MaxRecordLength=20;public void StartVoskStt(object a,object b,bool c,int d){} public bool StartRecognition()=>true;public void StopRecognition(){} }
 public class VoiceProcessor {}
 public class DeepSeekClient:MonoBehaviour {public List<(Action<string> ok,Action<string> error)> Requests=new();public Coroutine SendRequest(string p,Action<string> ok,Action<string> error){Requests.Add((ok,error));return new Coroutine();}}
 public class SessionManager {public static SessionManager Instance=new();public GameSession CurrentSession;public void Save(){}public void StartNewSession(DebateTopicSO t,PositionSO a,PositionSO b,bool first){CurrentSession=new(t,a,b,first);}public void RollbackTo(int i){CurrentSession.RollbackTo(i);} }
-public class GameUIController {public void OnGameStarted(){} public void OnEntryAdded(DialogueEntry e){}public void UpdateHealth(int a,int b){}public void OnGameOver(){}public void OnRollback(int i){} }
+public class VoskSpeechController {public string OpponentDifficulty="Средний";}
+public enum DialogueFirstSpeaker {Player,Opponent,Random}
+public static class DialogueOptions {public static bool Pending;public static DialogueFirstSpeaker FirstSpeaker;public static int Turns=5;public static string Difficulty="Средний";}
+public class GameUIController {public VoskSpeechController SpeechController=new();public void OnGameStarted(){} public void OnEntryAdded(DialogueEntry e){}public void UpdateHealth(int a,int b){}public void OnGameOver(){}public void OnRollback(int i){} }
 
 namespace UnityEngine {public static class Microphone {public static string[] devices=new[]{"test"};} public static class JsonUtility {public static T FromJson<T>(string s)=>System.Text.Json.JsonSerializer.Deserialize<T>(s,new System.Text.Json.JsonSerializerOptions{IncludeFields=true});}}
 namespace UnityEngine.SceneManagement {public static class SceneManager{public static void LoadScene(string s){}}}

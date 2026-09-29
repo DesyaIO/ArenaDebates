@@ -1,0 +1,148 @@
+ .gitignore                                         |     4 [32m+[m[31m-[m
+ .../HuggingFaceAPIConfig.asset.meta => Art.meta}   |     6 [32m+[m[31m-[m
+ Assets/Art/Arena.meta                              |     8 [32m+[m
+ Assets/Art/Arena/Corridor.png                      |   Bin [31m0[m -> [32m131251[m bytes
+ Assets/Art/Arena/Corridor.png.meta                 |   140 [32m+[m
+ Assets/Art/Arena/Dossier.prefab                    |   927 [32m+[m
+ Assets/Art/Arena/Dossier.prefab.meta               |     7 [32m+[m
+ Assets/Art/Arena/DossierPlate.png                  |   Bin [31m0[m -> [32m72451[m bytes
+ Assets/Art/Arena/DossierPlate.png.meta             |   140 [32m+[m
+ Assets/Art/Arena/Fonts.meta                        |     8 [32m+[m
+ Assets/Art/Arena/Fonts/arial.ttf                   |   Bin [31m0[m -> [32m1045720[m bytes
+ Assets/Art/Arena/Fonts/arial.ttf.meta              |    21 [32m+[m
+ Assets/Art/Arena/Fonts/arialbd.ttf                 |   Bin [31m0[m -> [32m989780[m bytes
+ Assets/Art/Arena/Fonts/arialbd.ttf.meta            |    21 [32m+[m
+ Assets/Art/Arena/Fonts/segoeui.ttf                 |   Bin [31m0[m -> [32m959752[m bytes
+ Assets/Art/Arena/Fonts/segoeui.ttf.meta            |    21 [32m+[m
+ Assets/Art/Arena/HelloScene.jpg                    |   Bin [31m0[m -> [32m259888[m bytes
+ Assets/Art/Arena/HelloScene.jpg.meta               |   140 [32m+[m
+ Assets/Art/Arena/MapBackground.png                 |   Bin [31m0[m -> [32m1240530[m bytes
+ Assets/Art/Arena/MapBackground.png.meta            |   140 [32m+[m
+ Assets/Art/Arena/MapScene.jpg                      |   Bin [31m0[m -> [32m1248780[m bytes
+ Assets/Art/Arena/MapScene.jpg.meta                 |   140 [32m+[m
+ Assets/Art/Arena/MethodChip.prefab                 |   434 [32m+[m
+ Assets/Art/Arena/MethodChip.prefab.meta            |     7 [32m+[m
+ Assets/Art/Arena/Pill.png                          |   Bin [31m0[m -> [32m917[m bytes
+ Assets/Art/Arena/Pill.png.meta                     |   140 [32m+[m
+ Assets/Art/Arena/Round.png                         |   Bin [31m0[m -> [32m480[m bytes
+ Assets/Art/Arena/Round.png.meta                    |   140 [32m+[m
+ Assets/Art/Arena/WelcomeBackground.png             |   Bin [31m0[m -> [32m616558[m bytes
+ Assets/Art/Arena/WelcomeBackground.png.meta        |   140 [32m+[m
+ Assets/Art/Arena/chapters.json                     |    49 [32m+[m
+ Assets/Art/Arena/chapters.json.meta                |     7 [32m+[m
+ Assets/Art/Arena/folder_art.png                    |   Bin [31m0[m -> [32m66413[m bytes
+ Assets/Art/Arena/folder_art.png.meta               |   140 [32m+[m
+ Assets/Art/Arena/icon.jpg                          |   Bin [31m0[m -> [32m683865[m bytes
+ Assets/Art/Arena/icon.jpg.meta                     |   140 [32m+[m
+ Assets/Editor.meta                                 |     8 [32m+[m
+ Assets/Editor/ArenaDesignBuilder.cs                |   428 [32m+[m
+ .../ArenaDesignBuilder.cs.meta}                    |     2 [32m+[m[31m-[m
+ Assets/Editor/ArenaDesignVerification.cs           |    91 [32m+[m
+ .../ArenaDesignVerification.cs.meta}               |     2 [32m+[m[31m-[m
+ Assets/Editor/ArenaLegacyDots.cs                   |    55 [32m+[m
+ Assets/Editor/ArenaLegacyDots.cs.meta              |    11 [32m+[m
+ Assets/Editor/ArenaUiPolish.cs                     |   107 [32m+[m
+ Assets/Editor/ArenaUiPolish.cs.meta                |    11 [32m+[m
+ Assets/Editor/DialogueFlowVerification.cs          |   115 [32m+[m
+ Assets/Editor/DialogueFlowVerification.cs.meta     |    11 [32m+[m
+ Assets/Editor/LearningDialogRedesign.cs            |   272 [32m+[m
+ Assets/Editor/LearningDialogRedesign.cs.meta       |    11 [32m+[m
+ Assets/Editor/VoskWindowsBuildPlugin.cs            |    34 [32m+[m
+ Assets/Editor/VoskWindowsBuildPlugin.cs.meta       |    11 [32m+[m
+ .../Vosk/Plugins/Windows/libgcc_s_seh-1.dll.meta   |     8 [32m+[m[31m-[m
+ .../Vosk/Plugins/Windows/libstdc++-6.dll.meta      |     8 [32m+[m[31m-[m
+ .../Vosk/Plugins/Windows/libvosk.dll.meta          |     8 [32m+[m[31m-[m
+ .../Vosk/Plugins/Windows/libwinpthread-1.dll.meta  |     8 [32m+[m[31m-[m
+ Assets/Resources/DialogPortrait.jpg                |   Bin [31m0[m -> [32m683865[m bytes
+ Assets/Resources/DialogPortrait.jpg.meta           |   140 [32m+[m
+ Assets/Scenes/DialogScene.unity                    |  5755 [32m+++++[m[31m-[m
+ Assets/Scenes/GoalSetupScene.unity                 |  7065 [32m+++++[m[31m---[m
+ Assets/Scenes/LearningDialog.unity                 | 18114 [32m++++++++++++++++[m[31m---[m
+ Assets/Scenes/LearningScene.unity                  |  3257 [32m++[m[31m--[m
+ Assets/Scenes/ListeningScene.unity                 | 16380 [32m+++++++++++++[m[31m----[m
+ Assets/Scenes/LoginScene.unity                     |  7105 [32m++++++[m[31m--[m
+ Assets/Scenes/MenuScene.unity                      | 14473 [32m++++++++++++[m[31m---[m
+ Assets/Scripts/Core/GameManager.cs                 |    79 [32m+[m[31m-[m
+ Assets/Scripts/Core/GameSession.cs                 |    37 [32m+[m[31m-[m
+ Assets/Scripts/Core/SessionManager.cs              |     9 [32m+[m[31m-[m
+ Assets/Scripts/Data/PlayerProgress.cs              |    61 [32m+[m[31m-[m
+ Assets/Scripts/Data/UserData.cs                    |     8 [32m+[m[31m-[m
+ Assets/Scripts/Integration/SpeechRecognizer.cs     |   150 [31m-[m
+ Assets/Scripts/Integration/VoiceProcessor.cs       |    11 [32m+[m[31m-[m
+ Assets/Scripts/Integration/VoskSpeechController.cs |   104 [32m+[m[31m-[m
+ Assets/Scripts/UI/ArenaArchiveCard.cs              |    14 [32m+[m
+ Assets/Scripts/UI/ArenaArchiveCard.cs.meta         |    11 [32m+[m
+ Assets/Scripts/UI/ArenaPrologue.cs                 |   144 [32m+[m
+ Assets/Scripts/UI/ArenaPrologue.cs.meta            |    11 [32m+[m
+ Assets/Scripts/UI/ArenaSceneLink.cs                |    12 [32m+[m
+ Assets/Scripts/UI/ArenaSceneLink.cs.meta           |    11 [32m+[m
+ Assets/Scripts/UI/ArenaWelcome.cs                  |    28 [32m+[m
+ Assets/Scripts/UI/ArenaWelcome.cs.meta             |    11 [32m+[m
+ Assets/Scripts/UI/DialogueOptions.cs               |   386 [32m+[m
+ Assets/Scripts/UI/DialogueOptions.cs.meta          |    11 [32m+[m
+ Assets/Scripts/UI/GameUIController.cs              |   398 [32m+[m[31m-[m
+ Assets/Scripts/UI/GoalSetupPanel.cs                |    17 [32m+[m[31m-[m
+ Assets/Scripts/UI/HistoryEntryUI.cs                |    30 [32m+[m[31m-[m
+ Assets/Scripts/UI/HistoryUIController.cs           |     4 [32m+[m[31m-[m
+ Assets/Scripts/UI/LearningController.cs            |     2 [32m+[m[31m-[m
+ Assets/Scripts/UI/LearningDialogController.cs      |   151 [32m+[m[31m-[m
+ Assets/Scripts/UI/LearningDialogView.cs            |   412 [32m+[m[31m-[m
+ Assets/Scripts/UI/LegacyArrowPrefix.cs             |    70 [32m+[m
+ Assets/Scripts/UI/LegacyArrowPrefix.cs.meta        |    11 [32m+[m
+ Assets/Scripts/UI/ListeningController.cs           |   273 [32m+[m[31m-[m
+ Assets/Scripts/UI/LoginPanel.cs                    |     9 [32m+[m[31m-[m
+ Assets/Scripts/UI/MenuController.cs                |   113 [32m+[m[31m-[m
+ Assets/Scripts/UI/MenuNarrativeOverlay.cs          |   188 [32m+[m
+ Assets/Scripts/UI/MenuNarrativeOverlay.cs.meta     |    11 [32m+[m
+ Assets/Scripts/UI/VisibleScrollbar.cs              |    68 [32m+[m
+ Assets/Scripts/UI/VisibleScrollbar.cs.meta         |    11 [32m+[m
+ Assets/Sprites/icon_traning 1.png                  |   Bin [31m0[m -> [32m106743[m bytes
+ Assets/Sprites/icon_traning 1.png.meta             |   140 [32m+[m
+ Assets/Sprites/icon_traning.png                    |   Bin [31m0[m -> [32m106743[m bytes
+ Assets/Sprites/icon_traning.png.meta               |   140 [32m+[m
+ Assets/Sprites/icons8-pause-96.png                 |   Bin [31m0[m -> [32m580[m bytes
+ Assets/Sprites/icons8-pause-96.png.meta            |   140 [32m+[m
+ ...320\264\320\265\320\275\320\270\320\265-96.png" |   Bin [31m0[m -> [32m765[m bytes
+ ...64\320\265\320\275\320\270\320\265-96.png.meta" |   140 [32m+[m
+ ...320\263\320\273\320\260\320\267\320\260-64.png" |   Bin [31m0[m -> [32m1657[m bytes
+ ...63\320\273\320\260\320\267\320\260-64.png.meta" |   140 [32m+[m
+ ...321\200\320\276\321\204\320\276\320\275-96.png" |   Bin [31m0[m -> [32m1113[m bytes
+ ...00\320\276\321\204\320\276\320\275-96.png.meta" |   140 [32m+[m
+ ...20\262\320\273\320\265\320\262\320\276-100.png" |   Bin [31m0[m -> [32m543[m bytes
+ ...2\320\273\320\265\320\262\320\276-100.png.meta" |   140 [32m+[m
+ ...320\262\320\273\320\265\320\262\320\276-90.png" |   Bin [31m0[m -> [32m657[m bytes
+ ...62\320\273\320\265\320\262\320\276-90.png.meta" |   140 [32m+[m
+ Assets/TechDescription.meta                        |     8 [32m+[m
+ ...70\321\201\320\260\320\275\320\270\320\265.txt" |    33 [32m+[m
+ ...1\201\320\260\320\275\320\270\320\265.txt.meta" |     7 [32m+[m
+ .../LiberationSans SDF - Fallback.asset            |  5433 [32m+[m[31m-----[m
+ Assets/Vosk/VoskSpeechToText.cs                    |   147 [32m+[m[31m-[m
+ Packages/manifest.json                             |     1 [31m-[m
+ Packages/packages-lock.json                        |    17 [31m-[m
+ ProjectSettings/EditorBuildSettings.asset          |    12 [32m+[m[31m-[m
+ ProjectSettings/ProjectSettings.asset              |     2 [32m+[m[31m-[m
+ README.md                                          |   107 [32m+[m
+ Tests/LearningDialog/Stubs.cs                      |     7 [32m+[m[31m-[m
+ Tests/LearningDialog/Tests.cs                      |    16 [32m+[m[31m-[m
+ .../bin/Debug/net9.0/Tests.deps.json               |    23 [31m-[m
+ Tests/LearningDialog/bin/Debug/net9.0/Tests.dll    |   Bin [31m37376[m -> [32m0[m bytes
+ Tests/LearningDialog/bin/Debug/net9.0/Tests.exe    |   Bin [31m155136[m -> [32m0[m bytes
+ .../bin/Debug/net9.0/Tests.runtimeconfig.json      |    12 [31m-[m
+ .../.NETCoreApp,Version=v9.0.AssemblyAttributes.cs |     4 [31m-[m
+ .../obj/Debug/net9.0/Tests.AssemblyInfo.cs         |    22 [31m-[m
+ .../Debug/net9.0/Tests.AssemblyInfoInputs.cache    |     1 [31m-[m
+ ...Tests.GeneratedMSBuildEditorConfig.editorconfig |    15 [31m-[m
+ .../obj/Debug/net9.0/Tests.assets.cache            |   Bin [31m226[m -> [32m0[m bytes
+ .../net9.0/Tests.csproj.CoreCompileInputs.cache    |     1 [31m-[m
+ .../Debug/net9.0/Tests.csproj.FileListAbsolute.txt |    14 [31m-[m
+ Tests/LearningDialog/obj/Debug/net9.0/Tests.dll    |   Bin [31m37376[m -> [32m0[m bytes
+ .../obj/Debug/net9.0/Tests.genruntimeconfig.cache  |     1 [31m-[m
+ Tests/LearningDialog/obj/Debug/net9.0/apphost.exe  |   Bin [31m155136[m -> [32m0[m bytes
+ .../LearningDialog/obj/Debug/net9.0/ref/Tests.dll  |   Bin [31m14336[m -> [32m0[m bytes
+ .../obj/Debug/net9.0/refint/Tests.dll              |   Bin [31m14336[m -> [32m0[m bytes
+ .../obj/Tests.csproj.nuget.dgspec.json             |    73 [31m-[m
+ .../LearningDialog/obj/Tests.csproj.nuget.g.props  |    16 [31m-[m
+ .../obj/Tests.csproj.nuget.g.targets               |     2 [31m-[m
+ Tests/LearningDialog/obj/project.assets.json       |    79 [31m-[m
+ Tests/LearningDialog/obj/project.nuget.cache       |     8 [31m-[m
+ 147 files changed, 67600 insertions(+), 18857 deletions(-)

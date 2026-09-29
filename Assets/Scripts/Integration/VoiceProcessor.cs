@@ -87,7 +87,7 @@ public class VoiceProcessor : MonoBehaviour
     {
         get
         {
-            if (CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Microphone.devices.Length)
+            if (Devices == null || CurrentDeviceIndex < 0 || CurrentDeviceIndex >= Devices.Count)
                 return string.Empty;
             return Devices[CurrentDeviceIndex];
         }
@@ -143,7 +143,7 @@ public class VoiceProcessor : MonoBehaviour
             return;
         }
 
-        CurrentDeviceIndex = MicrophoneIndex;
+        CurrentDeviceIndex = Mathf.Clamp(MicrophoneIndex, 0, Devices.Count - 1);
     }
 
     /// <summary>
@@ -184,6 +184,8 @@ public class VoiceProcessor : MonoBehaviour
     /// <param name="autoDetect">Should the audio continuously record based on the volume</param>
     public void StartRecording(int sampleRate = 16000, int frameSize = 512, bool ?autoDetect = null)
     {
+        UpdateDevices();
+        if (Devices.Count == 0) return;
         if (autoDetect != null)
         {
             _autoDetect = (bool) autoDetect;
@@ -209,6 +211,11 @@ public class VoiceProcessor : MonoBehaviour
         FrameLength = frameSize;
 
         _audioClip = Microphone.Start(CurrentDeviceName, true, 1, sampleRate);
+        if (_audioClip == null)
+        {
+            Debug.LogError("Не удалось начать запись: проверьте доступ приложения к микрофону.");
+            return;
+        }
 
         _recordingCoroutine = StartCoroutine(RecordData());
     }
