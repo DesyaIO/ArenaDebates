@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="NewDesign/icon.jpg" alt="Портрет куратора ArenaDebates" width="150">
+  <img src="GitImage/icon.png" alt="Портрет куратора ArenaDebates" width="150">
 </p>
 
 <h1 align="center">ArenaDebates</h1>
