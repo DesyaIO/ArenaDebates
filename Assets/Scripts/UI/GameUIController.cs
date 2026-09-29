@@ -428,7 +428,8 @@ public class GameUIController : MonoBehaviour
         int result = hasScores ? playerScore.CompareTo(opponentScore) : 0;
         StatusText.text = "Диалог завершён";
 
-        // Показываем экран окончания
+        // Скрываем основной UI и показываем экран окончания
+        if (MainPanel != null) MainPanel.SetActive(false);
         if (EndGamePanel != null) EndGamePanel.SetActive(true);
 
         WinnerText.text = result > 0 ? "ПОБЕДА" : result < 0 ? "ПОРАЖЕНИЕ" : "НИЧЬЯ";
@@ -480,6 +481,7 @@ public class GameUIController : MonoBehaviour
     {
         HistoryUI.Hide();
         if (EndGamePanel != null) EndGamePanel.SetActive(false);
+        if (MainPanel != null) MainPanel.SetActive(true);   // ← добавляем
 
         var s = SessionManager.Instance.CurrentSession;
         _transcript = _feedback = _opponent = "";

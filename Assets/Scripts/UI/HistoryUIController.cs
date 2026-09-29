@@ -29,20 +29,49 @@ public class HistoryUIController : MonoBehaviour
     /// </summary>
     public void Show(System.Action<int> onRollbackClicked = null)
     {
+        // 1. Проверяем обязательные ссылки
+        if (HistoryPanel == null)
+        {
+            Debug.LogError("HistoryUIController.Show: HistoryPanel не назначен в инспекторе.");
+            return;
+        }
+        if (EntriesContainer == null)
+        {
+            Debug.LogError("HistoryUIController.Show: EntriesContainer не назначен в инспекторе.");
+            return;
+        }
+        if (HistoryEntryPrefab == null)
+        {
+            Debug.LogError("HistoryUIController.Show: HistoryEntryPrefab не назначен в инспекторе.");
+            return;
+        }
+
+        // 2. Проверяем сессию
+        var session = SessionManager.Instance != null ? SessionManager.Instance.CurrentSession : null;
+        if (session == null || session.Entries == null)
+        {
+            Debug.LogWarning("HistoryUIController.Show: нет активной сессии — история пуста.");
+            // На всякий случай очистим контейнер и всё равно покажем панель
+            ClearEntries();
+            HistoryPanel.SetActive(true);
+            return;
+        }
+
         _onRollbackClicked = onRollbackClicked;
 
-        // Очистить старые записи
-        foreach (Transform child in EntriesContainer)
-            Destroy(child.gameObject);
+        // 3. Очищаем старые записи
+        ClearEntries();
 
-        var session = SessionManager.Instance.CurrentSession;
-        if (session == null) return;
-
+        // 4. Строим заново
         foreach (var entry in session.Entries)
         {
+            if (entry == null) continue;
             var go = Instantiate(HistoryEntryPrefab, EntriesContainer);
             var ui = go.GetComponent<HistoryEntryUI>();
-            ui.Initialize(entry, _onRollbackClicked, AllowRollback);
+            if (ui != null)
+                ui.Initialize(entry, _onRollbackClicked, AllowRollback);
+            else
+                Debug.LogWarning("HistoryEntryPrefab не содержит компонент HistoryEntryUI.");
         }
 
         HistoryPanel.SetActive(true);
@@ -50,6 +79,16 @@ public class HistoryUIController : MonoBehaviour
 
     public void Hide()
     {
-        HistoryPanel.SetActive(false);
+        if (HistoryPanel != null)
+            HistoryPanel.SetActive(false);
+    }
+
+    private void ClearEntries()
+    {
+        if (EntriesContainer == null) return;
+        // Destroy отложен до конца кадра — используем обратную итерацию,
+        // чтобы не мешать перебору.
+        for (int i = EntriesContainer.childCount - 1; i >= 0; i--)
+            Destroy(EntriesContainer.GetChild(i).gameObject);
     }
 }
